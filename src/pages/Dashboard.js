@@ -1,34 +1,62 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [longUrl, setLongUrl] = useState('');
   const [shortUrl, setShortUrl] = useState('');
   const [urlList, setUrlList] = useState([
-   { id: 1, longUrl: 'https://example1.com', shortUrl: 'http://short.ly/abc123', clickCount: 5 },
-   { id: 2, longUrl: 'https://example2.com', shortUrl: 'http://short.ly/xyz456', clickCount: 2 },
+    { id: 1, longUrl: 'https://example1.com', shortUrl: `${window.location.origin}/short/abc123`, clickCount: 5 },
+    { id: 2, longUrl: 'https://example2.com', shortUrl: `${window.location.origin}/short/xyz456`, clickCount: 2 },
   ]);
-  const [role, setRole] = useState('user'); // Change to 'admin' to see all URLs
-  const navigate = useNavigate();
+
+  // ✅ Checking authentication on mount
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (!storedUser) {
+      navigate("/login"); // 🔥 Redirecting if not logged in
+    }
+  }, [navigate]);
 
   const handleGenerateShortUrl = () => {
-    // Logic for generating a short URL (this is a mockup for now)
-    const generatedShortUrl = `http://short.ly/${Math.random().toString(36).substring(7)}`;
+    if (!longUrl.trim()) {
+      alert('Please enter a valid URL');
+      return;
+    }
+
+    const id = Math.random().toString(36).substring(7);
+    const generatedShortUrl = `${window.location.origin}/short/${id}`;
+
+    const newUrlEntry = {
+      id,
+      longUrl,
+      shortUrl: generatedShortUrl,
+      clickCount: 0
+    };
+
+    setUrlList((prevList) => [...prevList, newUrlEntry]);
     setShortUrl(generatedShortUrl);
+    setLongUrl('');
   };
 
   const handleLogout = () => {
-    // Logic for logout (clear session or token, etc.)
-    navigate('/login');
+    localStorage.removeItem("user"); // ✅ Removing user from localStorage
+    navigate('/login'); // ✅ Redirecting to login page
   };
 
-  const filteredUrls = role === 'admin' ? urlList : urlList.filter(url => url.longUrl.startsWith('https://example'));
+  const handleUrlClick = (shortUrl) => {
+    setUrlList((prevList) =>
+      prevList.map(url =>
+        url.shortUrl === shortUrl ? { ...url, clickCount: url.clickCount + 1 } : url
+      )
+    );
+    window.location.href = shortUrl;
+  };
 
   return (
     <div style={styles.container}>
       <h2 style={styles.header}>Dashboard</h2>
       
-      {/* URL Shortener Input Section */}
       <div style={styles.section}>
         <h3>URL Shortener</h3>
         <input
@@ -39,10 +67,13 @@ const Dashboard = () => {
           style={styles.input}
         />
         <button onClick={handleGenerateShortUrl} style={styles.button}>Generate Short URL</button>
-        {shortUrl && <p style={styles.shortUrl}>Short URL: <a href={shortUrl} target="_blank" rel="noopener noreferrer">{shortUrl}</a></p>}
+        {shortUrl && (
+          <p style={styles.shortUrl}>
+            Short URL: <a href={shortUrl} target="_blank" rel="noopener noreferrer">{shortUrl}</a>
+          </p>
+        )}
       </div>
       
-      {/* URL Tracking Table */}
       <div style={styles.section}>
         <h3>URL Tracking</h3>
         <table style={styles.table}>
@@ -54,10 +85,14 @@ const Dashboard = () => {
             </tr>
           </thead>
           <tbody>
-            {filteredUrls.map(url => (
+            {urlList.map(url => (
               <tr key={url.id}>
                 <td>{url.longUrl}</td>
-                <td><a href={url.shortUrl} target="_blank" rel="noopener noreferrer">{url.shortUrl}</a></td>
+                <td>
+                  <a href="#" onClick={(e) => { e.preventDefault(); handleUrlClick(url.shortUrl); }}>
+                    {url.shortUrl}
+                  </a>
+                </td>
                 <td>{url.clickCount}</td>
               </tr>
             ))}
@@ -65,7 +100,6 @@ const Dashboard = () => {
         </table>
       </div>
 
-      {/* Logout Button */}
       <button onClick={handleLogout} style={styles.logoutButton}>Logout</button>
     </div>
   );
@@ -120,15 +154,6 @@ const styles = {
   table: {
     width: '100%',
     borderCollapse: 'collapse',
-  },
-  tableHeader: {
-    textAlign: 'left',
-    backgroundColor: '#f2f2f2',
-    padding: '10px',
-  },
-  tableRow: {
-    padding: '10px',
-    borderBottom: '1px solid #ddd',
   },
   logoutButton: {
     padding: '12px 20px',

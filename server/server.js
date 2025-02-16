@@ -4,7 +4,7 @@ const mysql = require('mysql2'); // Using mysql2 for promises
 const bcrypt = require('bcryptjs');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const jwt = require('jsonwebtoken'); // Add JWT for token generation
+const jwt = require('jsonwebtoken'); // Adding JWT for token generation
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -16,9 +16,9 @@ app.use(bodyParser.json()); // Parse JSON requests
 // MySQL Database Connection
 const db = mysql.createPool({
   host: 'localhost',
-  user: 'root', // Change to your MySQL username
-  password: '2001', // Change to your MySQL password
-  database: 'url_shortener_db', // Change to your actual database name
+  user: 'root', 
+  password: '2001', 
+  database: 'url_shortener_db', // database name
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
@@ -72,7 +72,6 @@ app.post('/signup', async (req, res) => {
 
     console.log('User added:', result);
 
-    // ✅ Ensure frontend gets a success response
     return res.status(201).json({ success: true, message: 'User registered successfully!' });
 
   } catch (error) {
@@ -82,48 +81,55 @@ app.post('/signup', async (req, res) => {
 });
 
 // ✅ Login Route
-app.post('/login', async (req, res) => {
-  const { email, password } = req.body;
+app.post('/api/login', async (req, res) => {
+    const { email, password } = req.body;
 
-  console.log('Received login data:', req.body); // Debugging log
+    console.log('Received login data:', req.body); // Debugging log
 
-  // Input validation
-  if (!email || !password) {
-    return res.status(400).json({ success: false, message: 'Both email and password are required!' });
-  }
-
-  try {
-    // ✅ Check if user exists
-    const [users] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
-
-    if (users.length === 0) {
-      return res.status(400).json({ success: false, message: 'User not found! Please check your email and try again.' });
+    if (!email || !password) {
+        return res.status(400).json({ success: false, message: 'All fields are required!' });
     }
 
-    // ✅ Compare password with hashed password
-    const isPasswordCorrect = await bcrypt.compare(password, users[0].password);
+    try {
+        // ✅ Check if the user exists
+        const [users] = await db.query('SELECT * FROM users WHERE email = ?', [email]);
 
-    if (!isPasswordCorrect) {
-      return res.status(400).json({ success: false, message: 'Incorrect password! Please try again.' });
+        if (users.length === 0) {
+            return res.status(401).json({ success: false, message: 'Invalid email or password!' });
+        }
+
+        const user = users[0];
+
+        // ✅ Verify password
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            return res.status(401).json({ success: false, message: 'Invalid email or password!' });
+        }
+
+        // ✅ Generating JWT token with user role
+        const token = jwt.sign(
+            { id: user.id, role: user.role }, 
+            process.env.JWT_SECRET,  // Using secret key from .env
+            { expiresIn: '1h' }
+        );
+
+        console.log('User logged in:', user.role);
+
+        // ✅ Sending role-based response
+        return res.status(200).json({
+            success: true,
+            message: 'Login successful!',
+            role: user.role,  // Sending role to frontend
+            token
+        });
+
+    } catch (error) {
+        console.error('Login error:', error);
+        return res.status(500).json({ success: false, message: 'Server error! Please try again later.' });
     }
-
-    // ✅ Create JWT token
-    const token = jwt.sign(
-      { id: users[0].id, username: users[0].username, role: users[0].role }, // Payload
-      process.env.JWT_SECRET, // Secret key from .env file
-      { expiresIn: '1h' } // Token expires in 1 hour
-    );
-
-    // ✅ Send success response with token
-    return res.status(200).json({ success: true, message: 'Login successful!', token });
-
-  } catch (error) {
-    console.error('Login error:', error);
-    return res.status(500).json({ success: false, message: 'Server error! Please try again later.' });
-  }
 });
 
-// ✅ Start server
+// ✅ Starting server
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });

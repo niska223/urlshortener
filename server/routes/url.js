@@ -6,7 +6,7 @@ const router = express.Router();
 // Shorten URL route
 router.post('/shorten', (req, res) => {
     const { original_url, user_id } = req.body;
-    const short_url = shortid.generate();  // Generate short URL
+    const short_url = shortid.generate();  // Generating URL
 
     const query = 'INSERT INTO urls (original_url, short_url, user_id) VALUES (?, ?, ?)';
     db.query(query, [original_url, short_url, user_id], (err, result) => {

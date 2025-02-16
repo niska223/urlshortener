@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -28,24 +26,24 @@ const Login = () => {
     }
 
     try {
-      const response = await fetch('http://localhost:5000/login', {
+      const response = await fetch('http://localhost:5000/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
       });
 
       const data = await response.json();
+      
 
-      if (response.ok) {
-        localStorage.setItem('user', JSON.stringify(data.user));
-        alert('Login successful!');
-        navigate('/dashboard');
+      if (data.success) {
+        localStorage.setItem('user', JSON.stringify(data.user)); // Saving user in localStorage
+        window.location.href = '/dashboard'; // Redirecting to dashboard
       } else {
-        alert(data.message || 'Invalid email or password!');
+        alert('Invalid email or password');
       }
     } catch (error) {
       console.error('Login error:', error);
-      alert('Something went wrong! Please try again.');
+      alert('Something went wrong. Try again.');
     }
   };
 
