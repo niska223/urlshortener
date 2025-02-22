@@ -33,13 +33,19 @@ const Login = () => {
       });
 
       const data = await response.json();
-      
 
       if (data.success) {
-        localStorage.setItem('user', JSON.stringify(data.user)); // Saving user in localStorage
-        window.location.href = '/dashboard'; // Redirecting to dashboard
+        localStorage.setItem('user', JSON.stringify(data.user));
+        localStorage.setItem('token', data.token); // Save token
+
+        // Redirect based on role
+        if (data.user.role === 'admin') {
+          window.location.href = '/AdminDashboard';
+        } else {
+          window.location.href = '/Dashboard';
+        }
       } else {
-        alert('Invalid email or password');
+        alert(data.message || 'Invalid email or password');
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -77,6 +83,7 @@ const Login = () => {
     </div>
   );
 };
+
 
 const styles = {
   container: {
